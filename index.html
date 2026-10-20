@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2b4a9b">
+<title>Français Básico A1</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --ink:#1b2540; --muted:#55607a; --bg:#f2f5f9; --card:#ffffff; --line:#d5dce8;
+  --blue:#2b4a9b; --red:#c0392b; --ok:#1f7a4d; --okbg:#e3f3ea; --badbg:#fbe5e2;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --ink:#eef1f8; --muted:#a9b3c9; --bg:#121829; --card:#1b2338; --line:#2f3a57;
+    --blue:#8fa8f0; --red:#ef7a6c; --ok:#6fd1a0; --okbg:#173a2b; --badbg:#46201c; }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:19px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.flag{height:8px;background:linear-gradient(90deg,#2b4a9b 0 33.3%,#fff 33.3% 66.6%,#c0392b 66.6%)}
+header{padding:18px 18px 6px;max-width:720px;margin:0 auto}
+h1{font:700 2rem/1.15 Georgia,"Times New Roman",serif;margin:0 0 4px;letter-spacing:-.01em}
+h2{font:700 1.45rem/1.25 Georgia,serif;margin:0 0 8px}
+h3{font-size:1.05rem;margin:22px 0 8px}
+.sub{color:var(--muted);margin:0}
+main{max-width:720px;margin:0 auto;padding:8px 18px 60px}
+.status{font-size:.85rem;color:var(--muted);margin-top:8px}
+.bar{height:10px;background:var(--line);border-radius:6px;overflow:hidden;margin:14px 0 4px}
+.bar>i{display:block;height:100%;background:var(--blue);width:0;transition:width .3s}
+button{font:inherit;cursor:pointer}
+.lesson{display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  background:var(--card);border:1.5px solid var(--line);border-radius:14px;
+  padding:16px;margin:10px 0;color:var(--ink);min-height:68px}
+.lesson:focus-visible,.btn:focus-visible,.opt:focus-visible,.say:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.num{flex:none;width:42px;height:42px;border-radius:50%;border:2px solid var(--blue);
+  display:grid;place-items:center;font-weight:700;color:var(--blue)}
+.lesson.done .num{background:var(--ok);border-color:var(--ok);color:#fff}
+.lesson b{display:block}
+.lesson small{color:var(--muted)}
+.btn{background:var(--blue);color:#fff;border:0;border-radius:12px;padding:14px 20px;min-height:52px;font-weight:600}
+@media (prefers-color-scheme: dark){.btn{color:#0e1424}}
+.btn.alt{background:transparent;color:var(--blue);border:2px solid var(--blue)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}
+.box{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:6px 16px 16px;margin:14px 0}
+.tip{border-left:5px solid var(--red);background:var(--card);padding:10px 14px;margin:12px 0;border-radius:0 10px 10px 0}
+table{width:100%;border-collapse:collapse}
+td{padding:10px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.fr{font:700 1.15rem Georgia,serif}
+td.pr{color:var(--muted);font-size:.9rem}
+.say{background:none;border:1.5px solid var(--line);border-radius:10px;min-width:44px;min-height:44px;color:var(--blue);font-size:1.1rem}
+.q{font-size:1.2rem;font-weight:600;margin:10px 0 14px}
+.opt{display:block;width:100%;text-align:left;background:var(--card);color:var(--ink);
+  border:2px solid var(--line);border-radius:12px;padding:14px 16px;margin:10px 0;min-height:56px}
+.opt.good{border-color:var(--ok);background:var(--okbg)}
+.opt.bad{border-color:var(--red);background:var(--badbg)}
+.count{color:var(--muted);font-size:.9rem}
+.score{font:700 2.4rem Georgia,serif;margin:10px 0}
+.hint{font-size:.9rem;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){.bar>i{transition:none}}
+</style>
+</head>
+<body>
+<div class="flag"></div>
+<header>
+  <h1>Français Básico A1</h1>
+  <p class="sub">8 lecciones para empezar francés desde cero</p>
+  <div class="status" id="status"></div>
+</header>
+<main id="app"></main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+/* ============ CONTENIDO: 8 LECCIONES ============ */
+const L = [
+{ t:"Saludos y presentarse", d:"Hola, adiós, gracias y cómo decir tu nombre.",
+  intro:"En francés hay dos formas de tratar a alguien: <b>tu</b> (tú, con familia y amigos) y <b>vous</b> (usted, con desconocidos y personas mayores). Ante la duda, usa siempre <b>vous</b>.",
+  v:[["Bonjour","bon-yur","Hola / buenos días"],["Bonsoir","bon-suár","Buenas tardes / noches"],["Salut","sa-lü","Hola / adiós (con amigos)"],["Au revoir","o re-vuár","Adiós"],["Merci","mer-sí","Gracias"],["S’il vous plaît","sil vu plé","Por favor"],["Je m’appelle…","yö ma-pel","Me llamo…"],["Comment allez-vous ?","ko-man ta-lé vu","¿Cómo está usted?"],["Ça va ?","sa va","¿Qué tal?"],["Enchanté(e)","an-chan-té","Encantado/a"]],
+  n:["La <b>j</b> francesa suena como una «y» suave, casi «zh».","Un hombre dice «enchanté» y una mujer «enchantée»; suenan igual."],
+  e:[["¿Cómo se dice «gracias»?",["Merci","Bonjour","Salut","Au revoir"],0],["¿Qué saludo usas con un amigo?",["Salut","Bonsoir","S’il vous plaît","Au revoir"],0],["«Je m’appelle Fer» significa:",["Me llamo Fer","Hasta luego, Fer","Gracias, Fer"],0],["Para tratar de «usted» usas:",["vous","tu","je"],0],["«S’il vous plaît» significa:",["Por favor","De nada","Perdón"],0]]},
+{ t:"Pronunciación y alfabeto", d:"Los sonidos que no existen en español.",
+  intro:"El francés se escribe de una forma y suena de otra. Con unas pocas reglas lo harás bien. Pulsa 🔊 para escuchar cada palabra.",
+  v:[["u (ü)","labios de «u», di «i»","tu, rue"],["ou","u","vous, nous"],["oi","uá","moi, trois"],["ch","sh","chat, chercher"],["j","zh suave","je, jour"],["gn","ñ","montagne"],["an / en","nasal «an»","enfant, dans"],["on","nasal «on»","bon, nom"],["in / ain","nasal «an» abierta","vin, pain"],["eau / au","o","eau, beau"],["h","muda (no suena)","homme, hôtel"],["r","gutural, al fondo de la garganta","rouge, merci"]],
+  n:["Las consonantes finales casi nunca suenan: <b>petit</b> = «pe-tí», <b>vous</b> = «vu».","La <b>e</b> al final de palabra es muda: <b>maison</b> = «me-zon».","Alfabeto: A (a) B (be) C (se) D (de) E (ö) F (ef) G (yé) H (ash) I (i) J (yi) K (ka) L (el) M (em) N (en) O (o) P (pe) Q (kü) R (er) S (es) T (te) U (ü) V (ve) W (dublö-ve) X (iks) Y (i-grek) Z (zed)."],
+  e:[["La «u» francesa se pronuncia:",["Labios de «u» diciendo «i»","Como la «u» española","Como la «o»"],0],["«ch» en «chat» suena como:",["«sh» (como «chis»)","«k»","«ch» española"],0],["La «t» final de «petit»:",["No se pronuncia","Suena fuerte","Suena como «z»"],0],["«oi» en «moi» suena:",["uá","oi","ui"],0],["La «h» de «homme»:",["Es muda","Se aspira fuerte","Suena como «j»"],0]]},
+{ t:"Números del 0 al 20", d:"Contar, decir tu edad y tu teléfono.",
+  intro:"Aprende estos 21 números y podrás decir edades, precios sencillos y horas.",
+  v:[["zéro","ze-ró","0"],["un","an (nasal)","1"],["deux","dö","2"],["trois","truá","3"],["quatre","katr","4"],["cinq","sank","5"],["six","sis","6"],["sept","set","7"],["huit","üit","8"],["neuf","nöf","9"],["dix","dis","10"],["onze","onz","11"],["douze","duz","12"],["treize","trez","13"],["quatorze","ka-torz","14"],["quinze","kanz","15"],["seize","sez","16"],["dix-sept","di-set","17"],["dix-huit","di-süit","18"],["dix-neuf","diz-nöf","19"],["vingt","van","20"]],
+  n:["Del 17 al 19 se dice «diez-siete», «diez-ocho», «diez-nueve».","La edad se dice con «tener»: <b>J’ai vingt ans</b> (tengo veinte años)."],
+  e:[["«trois» es:",["3","2","4"],0],["¿Cómo se escribe 7?",["sept","six","huit"],0],["«dix» es:",["10","6","20"],0],["12 en francés:",["douze","treize","onze"],0],["«vingt» es:",["20","2","5"],0]]},
+{ t:"Género y artículos", d:"le, la, les, un, une, des.",
+  intro:"En francés todos los nombres son masculinos o femeninos. El artículo te lo indica, así que aprende cada palabra <b>con</b> su artículo.",
+  v:[["le livre","lö livr","el libro (masc.)"],["la maison","la me-zon","la casa (fem.)"],["l’ami","la-mí","el amigo (delante de vocal)"],["les enfants","le zan-fan","los niños (plural)"],["un homme","an nom","un hombre"],["une femme","ün fam","una mujer"],["des amis","de za-mí","unos amigos"],["le café","lö ka-fé","el café"],["la voiture","la vuá-tür","el coche"],["le chat","lö sha","el gato"]],
+  n:["<b>le / un</b> = masculino, <b>la / une</b> = femenino, <b>les / des</b> = plural.","Delante de vocal o h muda, <b>le</b> y <b>la</b> pasan a <b>l’</b>.","El plural casi siempre añade una <b>-s</b> que no suena: la diferencia se oye solo en el artículo."],
+  e:[["«___ maison» (femenino):",["la","le","les"],0],["«___ ami» (amigo, empieza por vocal):",["l’","la","le"],0],["Plural de «le livre»:",["les livres","le livres","la livres"],0],["«un» se usa con un nombre:",["masculino","femenino","plural"],0],["«___ femme» (una mujer):",["une","un","des"],0]]},
+{ t:"Ser y tener: être y avoir", d:"Los dos verbos más importantes.",
+  intro:"<b>Être</b> (ser/estar) y <b>avoir</b> (tener) se usan constantemente. Apréndelos de memoria.",
+  v:[["je suis","yö süi","yo soy / estoy"],["tu es","tü e","tú eres"],["il / elle est","il / el e","él / ella es"],["nous sommes","nu som","somos"],["vous êtes","vu zet","usted es / sois"],["ils / elles sont","il / el son","ellos / ellas son"],["j’ai","yé","yo tengo"],["tu as","tü a","tú tienes"],["il / elle a","il / el a","él / ella tiene"],["nous avons","nu za-von","tenemos"],["vous avez","vu za-vé","usted tiene / tenéis"],["ils / elles ont","il / el zon","ellos / ellas tienen"]],
+  n:["Je suis espagnol(e). → Soy español(a).","J’ai deux frères. → Tengo dos hermanos.","La edad usa <b>avoir</b>: J’ai trente ans."],
+  e:[["«Je ___ espagnol»:",["suis","es","est"],0],["«Nous ___ contents»:",["sommes","sont","êtes"],0],["«Tu ___ un frère»:",["as","a","ai"],0],["«J’___ trente ans»:",["ai","suis","ont"],0],["«Ils ___ une maison»:",["ont","sont","avez"],0]]},
+{ t:"La familia y los posesivos", d:"mon, ma, mes… y los miembros de la familia.",
+  intro:"Los posesivos concuerdan con la cosa poseída, no con el poseedor: <b>mon père</b> (mi padre), <b>ma mère</b> (mi madre), <b>mes parents</b> (mis padres).",
+  v:[["le père","lö per","el padre"],["la mère","la mer","la madre"],["le frère","lö frer","el hermano"],["la sœur","la sör","la hermana"],["le fils","lö fis","el hijo"],["la fille","la fiy","la hija / la chica"],["le grand-père","lö gran-per","el abuelo"],["la grand-mère","la gran-mer","la abuela"],["le mari","lö ma-rí","el marido"],["la femme","la fam","la mujer / la esposa"],["les parents","le pa-ran","los padres"],["les enfants","le zan-fan","los hijos / los niños"]],
+  n:["<b>mon / ma / mes</b> = mi/mis · <b>ton / ta / tes</b> = tu/tus · <b>son / sa / ses</b> = su/sus.","<b>notre</b> = nuestro · <b>votre</b> = vuestro · <b>leur</b> = su (de ellos).","Delante de vocal se usa <b>mon</b> aunque sea femenino: <b>mon amie</b>."],
+  e:[["«Ma mère» significa:",["mi madre","mi padre","mis madres"],0],["«___ frère» (tu hermano):",["ton","ta","tes"],0],["«___ amie» (mi amiga):",["mon","ma","mes"],0],["«Mes enfants» significa:",["mis hijos","mi hijo","tus hijos"],0],["«Notre maison» significa:",["nuestra casa","vuestra casa","su casa (de él)"],0]]},
+{ t:"Verbos en -er y negación", d:"Hablar, vivir, gustar… y decir que no.",
+  intro:"La mayoría de los verbos franceses acaban en <b>-er</b> y se conjugan igual. Quita <b>-er</b> y añade: -e, -es, -e, -ons, -ez, -ent.",
+  v:[["je parle","yö parl","yo hablo"],["tu parles","tü parl","tú hablas"],["il / elle parle","il / el parl","él / ella habla"],["nous parlons","nu par-lon","hablamos"],["vous parlez","vu par-lé","usted habla / habláis"],["ils / elles parlent","il / el parl","ellos / ellas hablan"],["aimer","e-mé","amar / gustar"],["habiter","a-bi-té","vivir (en un lugar)"],["manger","man-yé","comer"],["regarder","rö-gar-dé","mirar"]],
+  n:["Negación: <b>ne … pas</b> rodea al verbo. <b>Je ne parle pas italien.</b>","Delante de vocal, <b>ne</b> pasa a <b>n’</b>: <b>Je n’aime pas le café.</b>","Pregunta fácil: añade <b>Est-ce que</b> al principio. <b>Est-ce que vous parlez espagnol ?</b>","En <b>nous</b> con manger se escribe <b>mangeons</b> (la «e» conserva el sonido suave)."],
+  e:[["«Nous ___» (parler):",["parlons","parlez","parlent"],0],["«Je ne parle ___ italien»:",["pas","non","rien"],0],["«Je ___ aime pas le café»:",["n’","ne","pas"],0],["«Ils parlent» significa:",["ellos hablan","nosotros hablamos","usted habla"],0],["«Vous habitez» significa:",["usted vive / vosotros vivís","yo vivo","ellos viven"],0]]},
+{ t:"En el café y frases útiles", d:"Pedir, preguntar y pedir ayuda.",
+  intro:"Con estas frases te defiendes en un café, un restaurante o una tienda. Pide siempre con <b>Je voudrais…</b> (quisiera…): es muy educado.",
+  v:[["Je voudrais un café","yö vu-dré an ka-fé","Quisiera un café"],["un thé","an té","un té"],["de l’eau","dö lo","agua"],["un croissant","an krua-san","un cruasán"],["L’addition, s’il vous plaît","la-di-sion sil vu plé","La cuenta, por favor"],["Combien ça coûte ?","kom-bian sa kut","¿Cuánto cuesta?"],["Où sont les toilettes ?","u son le tua-let","¿Dónde están los aseos?"],["Je ne comprends pas","yö nö kom-pran pa","No entiendo"],["Pouvez-vous répéter ?","pu-vé vu re-pe-té","¿Puede repetir?"],["Parlez-vous espagnol ?","par-lé vu es-pa-ñol","¿Habla español?"],["Excusez-moi","ek-skü-zé muá","Perdone / disculpe"],["De rien","dö rian","De nada"]],
+  n:["Mini diálogo: —Bonjour ! Je voudrais un café, s’il vous plaît. —Voilà ! —Merci. —De rien.","Si no entiendes algo, di con calma: <b>Pouvez-vous répéter, s’il vous plaît ?</b>"],
+  e:[["«Je voudrais un café» significa:",["quisiera un café","tengo un café","no quiero café"],0],["Para pedir la cuenta dices:",["L’addition, s’il vous plaît","Où sont les toilettes ?","De rien"],0],["«Je ne comprends pas» significa:",["no entiendo","no hablo","no quiero"],0],["«Où sont les toilettes ?» significa:",["¿Dónde están los aseos?","¿Cuánto cuesta?","¿Qué hora es?"],0],["«De rien» significa:",["de nada","por favor","perdón"],0]]}
+];
+
+/* ============ PROGRESO + FIREBASE ============ */
+const KEY="fr-a1-progreso";
+function empty(){return {done:{},scores:{}}}
+function loadLocal(){try{return JSON.parse(localStorage.getItem(KEY))||empty()}catch(e){return empty()}}
+function merge(a,b){
+  a=a||empty(); b=b||empty();
+  const done={...(a.done||{}),...(b.done||{})};
+  const scores={};
+  new Set([...Object.keys(a.scores||{}),...Object.keys(b.scores||{})]).forEach(k=>{
+    scores[k]=Math.max((a.scores||{})[k]||0,(b.scores||{})[k]||0);
+  });
+  return {done,scores};
+}
+let state=loadLocal();
+let docRef=null;
+const statusEl=document.getElementById("status");
+function setStatus(t){statusEl.textContent=t}
+
+function initFirebase(){
+  const cfg=window.FIREBASE_CONFIG;
+  if(typeof firebase==="undefined"||!cfg||!cfg.apiKey||/PEGA/i.test(cfg.apiKey)){
+    setStatus("Progreso guardado solo en este móvil");return;
+  }
+  try{
+    firebase.initializeApp(cfg);
+    docRef=firebase.firestore().collection("progreso").doc("frances-a1");
+    docRef.onSnapshot(snap=>{
+      if(snap.exists){
+        const m=merge(state,snap.data());
+        if(JSON.stringify(m)!==JSON.stringify(state)){state=m;persistLocal();render()}
+      }
+      setStatus("Sincronizado con Firebase ✓");
+    },err=>{setStatus("Sin sincronizar: "+(err.code||"error")+" (se guarda en el móvil)")});
+    docRef.get().then(s=>{
+      state=merge(state,s.exists?s.data():null);persistLocal();pushRemote();render();
+    }).catch(()=>{});
+  }catch(e){setStatus("Error de Firebase; se guarda en el móvil")}
+}
+function persistLocal(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+function pushRemote(){if(docRef)docRef.set(state,{merge:true}).catch(()=>setStatus("Sin conexión: se sincronizará más tarde"))}
+function save(){persistLocal();pushRemote()}
+
+/* ============ VOZ ============ */
+function say(txt){
+  if(!("speechSynthesis" in window))return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(txt.replace(/\s*\(e\)/,"").replace(/…/g,""));
+  u.lang="fr-FR";u.rate=.85;speechSynthesis.speak(u);
+}
+window.say=say;
+
+/* ============ VISTAS ============ */
+const app=document.getElementById("app");
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+function render(){location.hash.startsWith("#l")?showLesson(parseInt(location.hash.slice(2),10)):showHome()}
+window.addEventListener("hashchange",render);
+
+function showHome(){
+  const n=Object.keys(state.done).length;
+  app.innerHTML=`
+    <div class="bar" aria-hidden="true"><i style="width:${n/L.length*100}%"></i></div>
+    <p class="hint">${n} de ${L.length} lecciones completadas</p>
+    ${L.map((l,i)=>`
+      <button class="lesson ${state.done[i+1]?"done":""}" onclick="location.hash='#l${i+1}'">
+        <span class="num">${state.done[i+1]?"✓":i+1}</span>
+        <span><b>${l.t}</b><small>${l.d}${state.scores[i+1]?` · mejor nota ${state.scores[i+1]}/5`:""}</small></span>
+      </button>`).join("")}
+    <p class="hint">Consejo: haz una lección al día y no pases a la siguiente hasta sacar 4 o 5 aciertos.</p>`;
+  window.scrollTo(0,0);
+}
+
+function showLesson(n){
+  const l=L[n-1]; if(!l){location.hash="";return}
+  app.innerHTML=`
+    <div class="row" style="margin-top:6px"><button class="btn alt" onclick="location.hash=''">← Lecciones</button></div>
+    <h2>Lección ${n}: ${l.t}</h2>
+    <p>${l.intro}</p>
+    <div class="box"><table>
+      ${l.v.map(r=>`<tr>
+        <td class="fr">${r[0]}</td>
+        <td class="pr">${r[1]}</td>
+        <td>${r[2]}</td>
+        <td><button class="say" aria-label="Escuchar ${esc(r[0])}" onclick="say('${r[0].replace(/'/g,"\\'").replace(/’/g,"’")}')">🔊</button></td>
+      </tr>`).join("")}
+    </table></div>
+    ${l.n.map(t=>`<div class="tip">${t}</div>`).join("")}
+    <div class="row"><button class="btn" onclick="startQuiz(${n})">Hacer los ejercicios</button></div>`;
+  window.scrollTo(0,0);
+}
+
+let quiz=null;
+function startQuiz(n){
+  quiz={n,i:0,ok:0,qs:L[n-1].e.map(q=>({q:q[0],opts:shuffle(q[1].map((t,k)=>({t,c:k===q[2]})))}))};
+  showQ();
+}
+window.startQuiz=startQuiz;
+function showQ(){
+  const q=quiz.qs[quiz.i];
+  app.innerHTML=`
+    <div class="row" style="margin-top:6px"><button class="btn alt" onclick="location.hash='#l${quiz.n}';render()">← Volver a la lección</button></div>
+    <p class="count">Pregunta ${quiz.i+1} de ${quiz.qs.length}</p>
+    <p class="q">${q.q}</p>
+    <div id="opts">${q.opts.map((o,k)=>`<button class="opt" data-k="${k}">${o.t}</button>`).join("")}</div>
+    <div id="fb"></div>`;
+  document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>answer(+b.dataset.k));
+  window.scrollTo(0,0);
+}
+function answer(k){
+  const q=quiz.qs[quiz.i];
+  document.querySelectorAll(".opt").forEach((b,j)=>{
+    b.disabled=true;
+    if(q.opts[j].c)b.classList.add("good");
+    else if(j===k)b.classList.add("bad");
+  });
+  const right=q.opts[k].c; if(right)quiz.ok++;
+  const last=quiz.i===quiz.qs.length-1;
+  document.getElementById("fb").innerHTML=`
+    <p><b>${right?"¡Correcto!":"Casi. La respuesta correcta está en verde."}</b></p>
+    <button class="btn" id="next">${last?"Ver resultado":"Siguiente"}</button>`;
+  document.getElementById("next").onclick=()=>{last?finish():(quiz.i++,showQ())};
+}
+function finish(){
+  const {n,ok}=quiz, total=quiz.qs.length, pass=ok>=4;
+  state.scores[n]=Math.max(state.scores[n]||0,ok);
+  if(pass)state.done[n]=true;
+  save();
+  app.innerHTML=`
+    <p class="count">Lección ${n}</p>
+    <div class="score">${ok} / ${total}</div>
+    <p>${pass?"¡Muy bien! Lección completada.":"Aún no. Repasa la lección y vuelve a intentarlo: necesitas 4 aciertos."}</p>
+    <div class="row">
+      <button class="btn" onclick="startQuiz(${n})">Repetir ejercicios</button>
+      <button class="btn alt" onclick="location.hash='#l${n}';render()">Repasar lección</button>
+      ${pass&&n<L.length?`<button class="btn" onclick="location.hash='#l${n+1}'">Lección ${n+1} →</button>`:""}
+      <button class="btn alt" onclick="location.hash=''">Inicio</button>
+    </div>`;
+  window.scrollTo(0,0);
+}
+
+initFirebase();
+render();
+if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{})}
+</script>
+</body>
+</html>
