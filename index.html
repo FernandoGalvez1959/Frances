@@ -63,6 +63,13 @@ td.pr{color:var(--muted);font-size:.9rem}
 .score{font:700 2.4rem Georgia,serif;margin:10px 0}
 .hint{font-size:.9rem;color:var(--muted)}
 @media (prefers-reduced-motion: reduce){.bar>i{transition:none}}
+
+.pill{display:inline-block;font-size:.9rem;padding:6px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--muted);margin-top:10px}
+.pill.ok{color:var(--ok);border-color:var(--ok);background:var(--okbg);font-weight:600}
+.pill.warn{color:var(--red);border-color:var(--red)}
+input[type=email],input[type=password]{display:block;width:100%;font:inherit;padding:13px 14px;margin:8px 0;border:2px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink)}
+input:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.msg{min-height:1.4em;color:var(--red);font-size:.95rem;margin:4px 0}
 </style>
 </head>
 <body>
@@ -70,11 +77,12 @@ td.pr{color:var(--muted);font-size:.9rem}
 <header>
   <h1>Français Básico A1</h1>
   <p class="sub">8 lecciones para empezar francés desde cero</p>
-  <div class="status" id="status"></div>
+  <div><span class="pill" id="status" role="status">Comprobando…</span></div>
 </header>
 <main id="app"></main>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
@@ -122,8 +130,8 @@ const L = [
   e:[["«Je voudrais un café» significa:",["quisiera un café","tengo un café","no quiero café"],0],["Para pedir la cuenta dices:",["L’addition, s’il vous plaît","Où sont les toilettes ?","De rien"],0],["«Je ne comprends pas» significa:",["no entiendo","no hablo","no quiero"],0],["«Où sont les toilettes ?» significa:",["¿Dónde están los aseos?","¿Cuánto cuesta?","¿Qué hora es?"],0],["«De rien» significa:",["de nada","por favor","perdón"],0]]}
 ];
 
-/* ============ PROGRESO + FIREBASE ============ */
-const KEY="fr-a1-progreso";
+/* ============ PROGRESO + FIREBASE (con cuenta) ============ */
+const KEY="fr-a1-progreso", KBK="fr-a1-ultima-copia";
 function empty(){return {done:{},scores:{}}}
 function loadLocal(){try{return JSON.parse(localStorage.getItem(KEY))||empty()}catch(e){return empty()}}
 function merge(a,b){
@@ -136,33 +144,82 @@ function merge(a,b){
   return {done,scores};
 }
 let state=loadLocal();
-let docRef=null;
+let auth=null,db=null,docRef=null,user=null,unsub=null,fbOn=false,autoDone=false;
 const statusEl=document.getElementById("status");
-function setStatus(t){statusEl.textContent=t}
+function setStatus(cls,t){statusEl.className="pill "+cls;statusEl.textContent=t}
+function persistLocal(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+function pushRemote(){if(docRef)docRef.set(state,{merge:true}).then(()=>setStatus("ok","☁ Sincronizado · "+user.email)).catch(()=>setStatus("warn","Sin conexión: se sincronizará después"))}
+function save(){persistLocal();pushRemote()}
 
 function initFirebase(){
   const cfg=window.FIREBASE_CONFIG;
   if(typeof firebase==="undefined"||!cfg||!cfg.apiKey||/PEGA/i.test(cfg.apiKey)){
-    setStatus("Progreso guardado solo en este móvil");return;
+    setStatus("warn","Solo en este móvil (falta la configuración de Firebase)");
+    afterFirstSync();return;
   }
   try{
+    fbOn=true;
     firebase.initializeApp(cfg);
-    docRef=firebase.firestore().collection("progreso").doc("frances-a1");
-    docRef.onSnapshot(snap=>{
-      if(snap.exists){
-        const m=merge(state,snap.data());
-        if(JSON.stringify(m)!==JSON.stringify(state)){state=m;persistLocal();render()}
-      }
-      setStatus("Sincronizado con Firebase ✓");
-    },err=>{setStatus("Sin sincronizar: "+(err.code||"error")+" (se guarda en el móvil)")});
-    docRef.get().then(s=>{
-      state=merge(state,s.exists?s.data():null);persistLocal();pushRemote();render();
-    }).catch(()=>{});
-  }catch(e){setStatus("Error de Firebase; se guarda en el móvil")}
+    auth=firebase.auth(); db=firebase.firestore();
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+    auth.onAuthStateChanged(u=>{
+      user=u; if(unsub){unsub();unsub=null} docRef=null;
+      if(!u){setStatus("","Sin iniciar sesión · solo en este móvil");render();afterFirstSync();return}
+      docRef=db.collection("usuarios").doc(u.uid).collection("datos").doc("frances-a1");
+      setStatus("","Sincronizando…");
+      unsub=docRef.onSnapshot(snap=>{
+        if(snap.exists){
+          const m=merge(state,snap.data());
+          if(JSON.stringify(m)!==JSON.stringify(state)){state=m;persistLocal();render()}
+        }
+        setStatus("ok","☁ Sincronizado · "+u.email);
+      },err=>setStatus("warn","Sin sincronizar ("+(err.code||"error")+"): se guarda en el móvil"));
+      docRef.get().then(s=>{
+        state=merge(state,s.exists?s.data():null);persistLocal();pushRemote();render();afterFirstSync();
+      }).catch(()=>afterFirstSync());
+      render();
+    });
+  }catch(e){setStatus("warn","Error de Firebase; se guarda en el móvil");afterFirstSync()}
 }
-function persistLocal(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
-function pushRemote(){if(docRef)docRef.set(state,{merge:true}).catch(()=>setStatus("Sin conexión: se sincronizará más tarde"))}
-function save(){persistLocal();pushRemote()}
+
+const ERR={"auth/invalid-email":"El correo no es válido.","auth/missing-password":"Escribe la contraseña.","auth/weak-password":"La contraseña debe tener al menos 6 caracteres.","auth/email-already-in-use":"Ese correo ya tiene cuenta: pulsa «Entrar».","auth/invalid-credential":"Correo o contraseña incorrectos.","auth/wrong-password":"Contraseña incorrecta.","auth/user-not-found":"No hay cuenta con ese correo: pulsa «Crear cuenta».","auth/network-request-failed":"Sin conexión a internet.","auth/too-many-requests":"Demasiados intentos. Espera un poco."};
+function authAct(kind){
+  const e=document.getElementById("em").value.trim(),p=document.getElementById("pw").value,m=document.getElementById("am");
+  m.textContent="";
+  const f=kind==="new"?auth.createUserWithEmailAndPassword(e,p):auth.signInWithEmailAndPassword(e,p);
+  f.catch(x=>{m.textContent=ERR[x.code]||("Error: "+(x.code||x.message))});
+}
+function logout(){if(auth)auth.signOut()}
+window.authAct=authAct;window.logout=logout;
+
+/* ============ COPIA DE SEGURIDAD ============ */
+function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function doBackup(auto){
+  const data={app:"Français Básico A1",fecha:new Date().toISOString(),...state};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download="Frances-Basico-A1_"+today()+".json";
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  try{localStorage.setItem(KBK,today())}catch(e){}
+}
+function afterFirstSync(){
+  if(autoDone)return;autoDone=true;
+  let last=null;try{last=localStorage.getItem(KBK)}catch(e){}
+  const hay=Object.keys(state.done).length||Object.keys(state.scores).length;
+  if(hay&&last!==today())setTimeout(()=>doBackup(true),1200);
+}
+function restore(inp){
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{
+    const d=JSON.parse(r.result);
+    state=merge(state,{done:d.done||{},scores:d.scores||{}});save();render();
+    alert("Copia restaurada.");
+  }catch(e){alert("Ese archivo no es una copia válida.")}};
+  r.readAsText(f);inp.value="";
+}
+window.doBackup=doBackup;window.restore=restore;
 
 /* ============ VOZ ============ */
 function say(txt){
@@ -191,10 +248,30 @@ function showHome(){
         <span class="num">${state.done[i+1]?"✓":i+1}</span>
         <span><b>${l.t}</b><small>${l.d}${state.scores[i+1]?` · mejor nota ${state.scores[i+1]}/5`:""}</small></span>
       </button>`).join("")}
-    <p class="hint">Consejo: haz una lección al día y no pases a la siguiente hasta sacar 4 o 5 aciertos.</p>`;
+    <p class="hint">Consejo: haz una lección al día y no pases a la siguiente hasta sacar 4 o 5 aciertos.</p>
+    ${accountBox()}
+    <div class="box">
+      <h3>Copia de seguridad</h3>
+      <p class="hint">Se guarda sola una vez al día al abrir la app (archivo «Frances-Basico-A1_fecha.json» en Descargas).</p>
+      <div class="row" style="margin:8px 0 0">
+        <button class="btn alt" onclick="doBackup()">Guardar copia ahora</button>
+        <button class="btn alt" onclick="document.getElementById('rf').click()">Restaurar copia</button>
+      </div>
+      <input id="rf" type="file" accept=".json,application/json" hidden onchange="restore(this)">
+    </div>`;
   window.scrollTo(0,0);
 }
 
+function accountBox(){
+  if(!fbOn)return "";
+  if(user)return `<div class="box"><h3>Cuenta</h3><p>${esc(user.email)}</p><p class="hint">La sesión queda guardada: no tendrás que escribir la contraseña otra vez.</p><div class="row" style="margin:8px 0 0"><button class="btn alt" onclick="logout()">Cerrar sesión</button></div></div>`;
+  return `<div class="box"><h3>Sincronizar con tu cuenta</h3>
+    <p class="hint">Entra una vez y tu progreso se guardará en la nube. Usa la misma cuenta que en tus otras apps o crea una.</p>
+    <input id="em" type="email" placeholder="Correo electrónico" autocomplete="email">
+    <input id="pw" type="password" placeholder="Contraseña (mínimo 6)" autocomplete="current-password">
+    <div class="msg" id="am" role="alert"></div>
+    <div class="row" style="margin:4px 0 0"><button class="btn" onclick="authAct('in')">Entrar</button><button class="btn alt" onclick="authAct('new')">Crear cuenta</button></div></div>`;
+}
 function showLesson(n){
   const l=L[n-1]; if(!l){location.hash="";return}
   app.innerHTML=`
